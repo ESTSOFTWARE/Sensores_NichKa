@@ -1,6 +1,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <WiFi.h>
+#include <WiFiManager.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 
@@ -11,20 +12,16 @@
 #define PIN_TURBIDEZ      32
 
 // --- Pines relés (activos en LOW) ---
-#define RELAY_TEMP        25
+#define RELAY_TEMP          25
 #define RELAY_CONDUCTIVIDAD 26
-#define RELAY_ALCOHOL     27
-#define RELAY_TURBIDEZ    14
-
-// --- WiFi ---
-const char* WIFI_SSID     = "Redmi Note 13";
-const char* WIFI_PASSWORD = "delunoalocho";
+#define RELAY_ALCOHOL       27
+#define RELAY_TURBIDEZ      14
 
 // --- MQTT ---
-const char* MQTT_HOST      = "98.95.129.245";
+const char* MQTT_HOST      = "shark.rmq.cloudamqp.com";
 const int   MQTT_PORT      = 1883;
-const char* MQTT_USER      = "fabricio";
-const char* MQTT_PASSWORD  = "Fabricio.2312";
+const char* MQTT_USER      = "kcugwwbq:kcugwwbq";
+const char* MQTT_PASSWORD  = "LAG1cqP1fWpW-tXs2eQzyyq_fZMigTyj";
 const char* MQTT_CLIENT_ID = "esp32-sensores-1";
 const int   CIRCUIT_ID     = 1;
 
@@ -37,10 +34,10 @@ PubSubClient mqttClient(wifiClient);
 unsigned long ultimoEnvio = 0;
 
 // --- Estado relés ---
-bool relay_temp         = false;
+bool relay_temp          = false;
 bool relay_conductividad = false;
-bool relay_alcohol      = false;
-bool relay_turbidez     = false;
+bool relay_alcohol       = false;
+bool relay_turbidez      = false;
 
 void setRelay(int pin, bool encendido) {
   digitalWrite(pin, encendido ? LOW : HIGH);
@@ -84,10 +81,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   String message = "";
   for (unsigned int i = 0; i < length; i++) message += (char)payload[i];
   Serial.printf("[MQTT CMD] %s → %s\n", topic, message.c_str());
-
   StaticJsonDocument<256> doc;
   if (deserializeJson(doc, message)) return;
-
   for (JsonPair kv : doc.as<JsonObject>()) {
     aplicarComando(kv.key().c_str(), kv.value().as<const char*>());
   }
@@ -107,6 +102,17 @@ void publicarSensor(const char* sensor_type, float valor) {
   serializeJson(doc, payload);
   mqttClient.publish(topic, payload);
   Serial.printf("[MQTT] %s → %s\n", topic, payload);
+}
+
+void conectarWiFi() {
+  WiFiManager wm;
+  wm.setConfigPortalTimeout(180);
+  wm.setTitle("Fermentador IoT - Sensores");
+  if (!wm.autoConnect("Sensores-Setup")) {
+    Serial.println("[WiFi] Timeout, reiniciando...");
+    ESP.restart();
+  }
+  Serial.printf("[WiFi] Conectado. IP: %s\n", WiFi.localIP().toString().c_str());
 }
 
 void conectarMQTT() {
@@ -142,12 +148,7 @@ void setup() {
   }
 
   tempSensor.begin();
-
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("[WiFi] Conectando");
-  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
-  Serial.printf("\n[WiFi] Conectado. IP: %s\n", WiFi.localIP().toString().c_str());
-
+  conectarWiFi();
   conectarMQTT();
   Serial.println("[SETUP] Listo");
 }
