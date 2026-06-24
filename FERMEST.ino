@@ -178,10 +178,12 @@ void loop() {
     if (relay_turbidez)
       turbidez = calcularTurbidez(analogRead(PIN_TURBIDEZ) * (3.3 / 4095.0));
 
-    publicarSensor("temperature",  tempC);
-    publicarSensor("conductivity", tds_gL);
-    publicarSensor("alcohol",      ppm);
-    publicarSensor("turbidity",    turbidez);
+    // Solo publica el sensor que está encendido → al detener la fermentación
+    // deja de mandar datos y no consume mensajes de RabbitMQ.
+    if (relay_temp)          publicarSensor("temperature",  tempC);
+    if (relay_conductividad) publicarSensor("conductivity", tds_gL);
+    if (relay_alcohol)       publicarSensor("alcohol",      ppm);
+    if (relay_turbidez)      publicarSensor("turbidity",    turbidez);
 
     Serial.printf(
       "[MONITOR] Temp: %.2f°C | Cond: %.4f g/L | Alcohol: %.1f ppm | Turbidez: %.1f NTU\n",
