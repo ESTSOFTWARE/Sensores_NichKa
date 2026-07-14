@@ -25,7 +25,7 @@ const char* MQTT_PASSWORD  = "LAG1cqP1fWpW-tXs2eQzyyq_fZMigTyj";
 const char* MQTT_CLIENT_ID = "esp32-sensores-1";
 const int   CIRCUIT_ID     = 1;
 
-#define INTERVALO_ENVIO 30000
+#define INTERVALO_ENVIO 1000
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature tempSensor(&oneWire);
